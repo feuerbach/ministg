@@ -262,6 +262,7 @@ defaultPatternMatch (DefaultAlt var exp : _alts) = Just (var, exp)
 mkIntPrim :: (Integer -> Integer -> Integer) -> [Atom] -> Stack -> Heap -> Eval (Atom, Stack, Heap)
 mkIntPrim op [Literal (Integer i), Literal (Integer j)] stack heap
    = return (Literal $ Integer (i `op` j), stack, heap)
+mkIntPrim _ _ _ _ = error "mkIntPrim"
 
 -- | Convenience function for making integer comparison primitives. 
 mkIntComparePrim :: (Integer -> Integer -> Bool) -> [Atom] -> Stack -> Heap -> Eval (Atom, Stack, Heap)

@@ -108,6 +108,7 @@ letExp = flattenLet <$> (symbol Lex.Let *> leftBrace *> sepEndBy1 decl semiColon
 flattenLet :: [Decl] -> Exp -> Exp
 flattenLet [Decl var obj] body = Let var obj body
 flattenLet (Decl var obj : decls) body = Let var obj $ flattenLet decls body 
+flattenLet [] _ =  error "empty let"
 
 caseExp :: Parser Exp
 caseExp = Case <$> (symbol Lex.Case *> exp) <*> (symbol Lex.Of *> leftBrace *> sepEndBy1 alt semiColon <* rightBrace)
