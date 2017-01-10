@@ -88,9 +88,11 @@ smallStep _anyStyle (Let var object exp) stack heap = do
    setRule "LET"
    newVar <- freshVar
    callStack <- gets state_callStack
-   let annotatedObject = setThunkStack callStack object
-   let newHeap = updateHeap newVar annotatedObject heap
-   let newExp = subs (mkSub var (Variable newVar)) exp 
+   let sub = mkSub var (Variable newVar)
+       newObj = subs sub object
+       annotatedObject = setThunkStack callStack newObj
+       newHeap = updateHeap newVar annotatedObject heap
+       newExp = subs sub exp
    return $ Just (newExp, stack, newHeap)
 -- CASECON
 smallStep _anyStyle (Case (Atom (Variable v)) alts) stack heap
