@@ -98,6 +98,11 @@ smallStep _anyStyle (Case (Atom (Variable v)) alts) stack heap
      Just (vars, exp) <- exactPatternMatch constructor alts = do
         setRule "CASECON"
         return $ Just (subs (mkSubList $ zip vars args) exp, stack, heap)
+-- CASECON
+smallStep _anyStyle (Case (Tuple args) [PatTupleAlt vars exp]) stack heap
+   | length args == length vars = do
+        setRule "CASECON"
+        return $ Just (subs (mkSubList $ zip vars args) exp, stack, heap)
 -- CASEANY
 smallStep _anyStyle (Case (Atom v) alts) stack heap
    | isLiteral v || isValue (lookupHeapAtom v heap) =
@@ -117,6 +122,11 @@ smallStep _anyStyle (Case exp alts) stack heap = do
 -- RET 
 smallStep _anyStyle exp@(Atom atom) (CaseCont alts oldCallStack : stackRest) heap
    | isLiteral atom || isValue (lookupHeapAtom atom heap) = do
+        setRule "RET"
+        setCallStack oldCallStack
+        return $ Just (Case exp alts, stackRest, heap)
+smallStep _anyStyle exp@Tuple{} (CaseCont alts oldCallStack : stackRest) heap
+   = do
         setRule "RET"
         setCallStack oldCallStack
         return $ Just (Case exp alts, stackRest, heap)
@@ -251,12 +261,14 @@ exactPatternMatch con1 (PatAlt con2 vars exp : alts)
    | otherwise = exactPatternMatch con1 alts
 exactPatternMatch con (DefaultAlt {} : _) = Nothing
 exactPatternMatch _con [] = Nothing
+exactPatternMatch _ (PatTupleAlt{}:_) = error "Bad pattern"
 
 -- | Check for a default pattern match (x -> e) in a list of case alternatives.
 defaultPatternMatch :: [Alt] -> Maybe (Var, Exp)
 defaultPatternMatch [] = Nothing
 defaultPatternMatch (PatAlt {} : alts) = defaultPatternMatch alts
 defaultPatternMatch (DefaultAlt var exp : _alts) = Just (var, exp) 
+defaultPatternMatch (PatTupleAlt{}:_) = error "Bad pattern"
 
 -- | Convenience function for making integer primitives. 
 mkIntPrim :: (Integer -> Integer -> Integer) -> [Atom] -> Stack -> Heap -> Eval (Atom, Stack, Heap)
@@ -317,10 +329,13 @@ instance Substitute Exp where
       newSub = removeVars [var] s
    subs s (Case exp alts) = Case (subs s exp) (subs s alts)
    subs s (Stack str e) = Stack str $ subs s e
+   subs s (Tuple atoms) = Tuple (subs s atoms)
 
 instance Substitute Alt where
    subs s p@(PatAlt cons vars exp)
       = PatAlt cons vars $ subs (removeVars vars s) exp
+   subs s p@(PatTupleAlt vars exp)
+      = PatTupleAlt vars $ subs (removeVars vars s) exp
    subs s p@(DefaultAlt var exp)
       = DefaultAlt var $ subs (removeVars [var] s) exp
 

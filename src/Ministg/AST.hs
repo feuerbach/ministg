@@ -69,6 +69,7 @@ data Exp
    | Let Var Object Exp         -- ^ Let declaration. 
    | Case Exp [Alt]             -- ^ Case expression.
    | Stack String Exp           -- ^ Like SCC, but just for stacks. (stack str (exp))
+   | Tuple [Atom]               -- ^ Unboxed tuple
    deriving (Eq, Show)
 
 instance FreeVars Exp where
@@ -81,6 +82,7 @@ instance FreeVars Exp where
    freeVars (Case exp alts)
       = freeVars exp `Set.union` freeVars alts
    freeVars (Stack _str exp) = freeVars exp
+   freeVars (Tuple args) = freeVars args
 
 instance Pretty Exp where
    pretty (Atom a) = pretty a
@@ -100,6 +102,8 @@ instance Pretty Exp where
       rbrace
    pretty (Stack annotation exp) = 
       maybeNest exp (text "stack" <+> doubleQuotes (text annotation)) (pretty exp)
+   pretty (Tuple atoms) = text "(#" <+>
+      (hsep . punctuate (text ",")) (map pretty atoms) <+> text "#)"
 
 isNestedExp :: Exp -> Bool
 isNestedExp (Let {}) = True
@@ -117,15 +121,19 @@ unflattenLet exp = unflattenLetAcc exp []
 -- | Case alternatives (the right-hand-sides of case branches).
 data Alt
    = PatAlt Constructor [Var] Exp  -- ^ Constructor pattern (C x_1 ... x_n -> e, n >= 0).
+   | PatTupleAlt [Var] Exp
    | DefaultAlt Var Exp            -- ^ Default pattern (matches anything) (x -> e).
    deriving (Eq, Show)
 
 instance FreeVars Alt where
    freeVars (PatAlt constructor args exp) = freeVars exp \\ Set.fromList args
+   freeVars (PatTupleAlt args exp) = freeVars exp \\ Set.fromList args
    freeVars (DefaultAlt var exp) = Set.delete var $ freeVars exp 
 
 instance Pretty Alt where
    pretty (PatAlt con vars exp) = maybeNest exp (text con <+> hsep (map text vars) <+> rightArrow) (pretty exp)
+   pretty (PatTupleAlt vars exp) = maybeNest exp
+    (text "(#" <+> (hsep . punctuate (text ",")) (map text vars) <+> text "#)" <+> rightArrow) (pretty exp)
    pretty (DefaultAlt var exp) = text var <+> rightArrow <+> pretty exp
 
 rightArrow :: Doc

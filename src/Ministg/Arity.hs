@@ -40,7 +40,9 @@ class Arity a where
 instance Arity Alt where
    arity (PatAlt con args body) = 
       PatAlt con args <$> local (clearVars args) (arity body)
-   arity (DefaultAlt var body) = 
+   arity (PatTupleAlt args body) =
+      PatTupleAlt args <$> local (clearVars args) (arity body)
+   arity (DefaultAlt var body) =
       DefaultAlt var <$> local (clearVars [var]) (arity body)
 
 instance Arity Object where
@@ -73,6 +75,7 @@ instance Arity Exp where
    arity (Stack annotation exp) = Stack annotation <$> arity exp
    arity exp@(Atom {}) = return exp
    arity exp@(PrimApp {}) = return exp
+   arity exp@(Tuple {}) = return exp
 
 -- | Remove a list of variables from an ArityMap.
 clearVars :: [Var] -> ArityMap -> ArityMap

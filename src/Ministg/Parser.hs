@@ -50,7 +50,14 @@ exp = funCallOrVar <|>
       primApp <|> 
       letExp <|> 
       caseExp <|>
-      stack
+      stack <|>
+      tuple
+
+tuple :: Parser Exp
+tuple =
+  symbol Lex.LeftUnbParen *>
+  (Tuple <$> sepEndBy1 atom (symbol Lex.Comma)) <*
+  symbol Lex.RightUnbParen
 
 stack :: Parser Exp
 stack = Stack <$> (symbol Lex.Stack *> quotedString) <*> exp
@@ -122,13 +129,20 @@ literal :: Parser Literal
 literal = Integer <$> natural 
 
 alt :: Parser Alt
-alt = patAlt <|> defaultAlt
+alt = patAlt <|> patTupleAlt <|> defaultAlt
 
 patAlt :: Parser Alt
 patAlt = PatAlt <$> constructor <*> many var <*> (rightArrow *> exp)
 
 defaultAlt :: Parser Alt
 defaultAlt = DefaultAlt <$> var <*> (rightArrow *> exp)
+
+patTupleAlt :: Parser Alt
+patTupleAlt = PatTupleAlt <$
+  symbol Lex.LeftUnbParen <*>
+  (sepEndBy1 var (symbol Lex.Comma)) <*
+  symbol Lex.RightUnbParen <*
+  rightArrow <*> exp
 
 object :: Parser Object
 object = fun <|> pap <|> con <|> thunk <|> errorObj

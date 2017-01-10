@@ -51,7 +51,10 @@ data Symbol
    | RightParen
    | LeftBrace
    | RightBrace
+   | LeftUnbParen
+   | RightUnbParen
    | SemiColon
+   | Comma
    | Fun
    | Con
    | Pap
@@ -85,7 +88,7 @@ comment :: Parser ()
 comment = singleLineComment
 
 singleLineComment :: Parser ()
-singleLineComment = string  "#" >> manyTill anyChar eol >> return ()
+singleLineComment = try(string  "# ") >> manyTill anyChar eol >> return ()
 
 eol :: Parser ()
 eol = newline >> return ()
@@ -153,15 +156,18 @@ keyword =
 
 parenthesis :: Parser Token
 parenthesis = 
+   try(simpleTok "(#" LeftUnbParen) <|>
+   simpleTok "#)" RightUnbParen <|>
    simpleTok "(" LeftParen  <|> 
    simpleTok ")" RightParen <|>
    simpleTok "{" LeftBrace  <|>
-   simpleTok "}" RightBrace  
+   simpleTok "}" RightBrace
 
 punctuation :: Parser Token
 punctuation = 
    simpleTok "=" Equals 
    <|> simpleTok ";" SemiColon 
+   <|> simpleTok "," Comma
    <|> simpleTok "\\" BackSlash 
    <|> simpleTok "->" RightArrow
 
